@@ -436,7 +436,7 @@
       { facingMode: "environment" },
       { fps: 10, qrbox: 250 },
       async (decodedText) => {
-        html5QrCode.stop();
+        await html5QrCode.stop();
         readerElement.style.display = 'none';
 
         const itemId = decodedText.trim();
@@ -482,7 +482,15 @@
           console.error(err);
         }
       }
-    );
+    ).catch(err => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Camera Error',
+        text: 'Unable to access camera. Please check permission or browser support.'
+      });
+      console.error("QR Code start error:", err);
+      readerElement.style.display = 'none';
+    });
   });
 
   document.getElementById("borrow-form").addEventListener("submit", async function (e) {
@@ -529,5 +537,6 @@
     }
   });
 </script>
+
 </body>
 </html>

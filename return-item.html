@@ -6,6 +6,7 @@
   <title>🔄 Return Equipment</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     * {
       margin: 0;
@@ -421,149 +422,144 @@
     </div>
   </div>
 
-  <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbxxV-QTLjIHtWhG9GhmXRMajnjKuI2yrNOx9EfwDR5nk8ma4qgiE1rvnpprGafSer8/exec';
+  <script type="module">
+  const SUPABASE_URL = 'https://diwywcrdttidmlwbwxln.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd3l3Y3JkdHRpZG1sd2J3eGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMDcyOTMsImV4cCI6MjA2NDY4MzI5M30.0H3N7R1xLWP8GP-b1zoECiLuYE8mTp8vfNbEqUDnAUg'; // ← ย่อลงเพื่อความปลอดภัย
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    function startScan() {
-      const reader = document.getElementById('reader');
-      reader.style.display = 'block';
+  const scanBtn = document.getElementById('scan-btn');
+  const readerElement = document.getElementById('reader');
+  const formElement = document.getElementById('return-form');
 
-      const html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        async (decodedText) => {
-          html5QrCode.stop();
-          reader.style.display = 'none';
-          loadBorrowInfo(decodedText.trim());
-        }
-      ).catch(err => {
-        Swal.fire({
-          icon: 'error',
-          title: 'Camera Error',
-          text: 'Unable to access camera. Please check permissions.',
-          confirmButtonColor: '#1e3a8a'
-        });
-        console.error(err);
-      });
-    }
+  const itemIdEl = document.getElementById('itemId');
+  const itemNameEl = document.getElementById('itemName');
+  const borrowerEl = document.getElementById('borrower');
+  const borrowTimeEl = document.getElementById('borrowTime');
 
-    async function loadBorrowInfo(itemId) {
-      try {
-        Swal.fire({
-          title: 'Loading...',
-          text: 'Please wait while we fetch the information',
-          allowOutsideClick: false,
-          allowEscapeKey: false,
-          showConfirmButton: false,
-          didOpen: () => {
-            Swal.showLoading();
-          }
-        });
+  let html5QrCode;
 
-        const res = await fetch(`${scriptURL}?action=getLatestBorrow&itemId=${itemId}`);
-        const data = await res.json();
+  window.startScan = () => {
+    readerElement.style.display = 'block';
 
-        if (data.success) {
-          document.getElementById('itemId').value = itemId;
-          document.getElementById('itemName').value = data.itemName;
-          document.getElementById('borrower').value = data.borrower;
-          document.getElementById('borrowTime').value = formatDateTime(data.date, data.time);
-          document.getElementById('return-form').style.display = 'block';
-          Swal.close();
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: data.message,
-            confirmButtonColor: '#dc2626'
-          });
-        }
-      } catch (err) {
-        console.error(err);
-        Swal.fire({
-          icon: 'error',
-          title: 'Connection Error',
-          text: 'Unable to connect to server. Please check your internet connection.',
-          confirmButtonColor: '#dc2626'
-        });
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      async (decodedText) => {
+        html5QrCode.stop();
+        readerElement.style.display = 'none';
+        const itemId = decodedText.trim();
+        await fetchBorrowInfo(itemId);
       }
-    }
-
-    async function submitReturn() {
-      const itemId = document.getElementById('itemId').value;
-      const formData = new URLSearchParams();
-      formData.append("action", "return");
-      formData.append("itemId", itemId);
-
+    ).catch(err => {
       Swal.fire({
-        title: 'Processing...',
-        text: 'Please wait while we process your return',
+        icon: 'error',
+        title: 'Camera Error',
+        text: 'Unable to access camera. Please check permissions.',
+        confirmButtonColor: '#1e3a8a'
+      });
+      console.error(err);
+    });
+  };
+
+  async function fetchBorrowInfo(itemId) {
+    try {
+      Swal.fire({
+        title: 'Checking...',
         allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
+        didOpen: () => Swal.showLoading()
       });
 
-      try {
-        const res = await fetch(scriptURL, {
-          method: "POST",
-          body: formData
-        });
-        const result = await res.json();
+      const { data, error } = await supabase
+        .from('borrowings')
+        .select('*')
+        .eq('item_id', itemId)
+        .eq('returned', false)
+        .order('borrow_time', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-        if (result.success) {
-          Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: 'Item returned successfully.',
-            confirmButtonColor: '#059669',
-            timer: 3000,
-            timerProgressBar: true
-          });
-          
-          // Reset form and hide it
-          document.getElementById('return-form').reset();
-          document.getElementById('return-form').style.display = 'none';
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: result.message,
-            confirmButtonColor: '#dc2626'
-          });
-        }
-      } catch (err) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Connection Error',
-          text: 'Unable to connect to server. Please check your internet connection.',
-          confirmButtonColor: '#dc2626'
+      Swal.close();
+
+      if (error) throw error;
+      if (!data) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'No Active Borrowing',
+          text: 'This item is not currently borrowed.',
+          confirmButtonColor: '#d97706'
         });
       }
-    }
 
-    function formatDateTime(dateStr, timeStr) {
-      if (!dateStr || !timeStr) return "Invalid Date";
-
-      const dateObj = new Date(dateStr);
-      const timeObj = new Date(timeStr);
-
-      if (isNaN(dateObj) || isNaN(timeObj)) return "Invalid Date";
-
-      const merged = new Date(
-        dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(),
-        timeObj.getHours(), timeObj.getMinutes(), timeObj.getSeconds()
-      );
-
-      return merged.toLocaleString('en-GB', {
-        year: 'numeric', month: 'short', day: 'numeric',
+      const localTime = new Date(data.borrow_time).toLocaleString('en-GB', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric', month: 'short', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
         hour12: false
       });
+
+      itemIdEl.value = data.item_id;
+      itemNameEl.value = data.item_name;
+      borrowerEl.value = data.borrower;
+      borrowTimeEl.value = localTime;
+      formElement.dataset.borrowId = data.id;
+      formElement.style.display = 'block';
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Fetch Error',
+        text: 'Failed to fetch borrowing info.',
+        confirmButtonColor: '#dc2626'
+      });
+      console.error(err);
     }
-  </script>
+  }
+
+  window.submitReturn = async () => {
+    const borrowId = formElement.dataset.borrowId;
+    if (!borrowId) return;
+
+    Swal.fire({
+      title: 'Submitting...',
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const now = new Date();
+      const thaiTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+
+      const { error } = await supabase
+        .from('borrowings')
+        .update({
+          returned: true,
+          return_time: thaiTime.toISOString()
+        })
+        .eq('id', borrowId);
+
+      if (error) throw error;
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Item Returned!',
+        timer: 2500,
+        showConfirmButton: false
+      });
+
+      formElement.reset();
+      formElement.style.display = 'none';
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Return Failed',
+        text: 'Could not update return status.',
+        confirmButtonColor: '#dc2626'
+      });
+      console.error(err);
+    }
+  };
+</script>
+
 </body>
 </html>

@@ -422,7 +422,7 @@
     </div>
   </div>
 
-  <script>
+ <script>
   const SUPABASE_URL = 'https://diwywcrdttidmlwbwxln.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd3l3Y3JkdHRpZG1sd2J3eGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMDcyOTMsImV4cCI6MjA2NDY4MzI5M30.0H3N7R1xLWP8GP-b1zoECiLuYE8mTp8vfNbEqUDnAUg';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -483,11 +483,12 @@
             return;
           }
 
-          // ✅ ไม่มีข้อมูล → แสดงฟอร์มกรอกชื่อ
+          // ✅ No active borrow → show form
           document.getElementById('itemId').value = itemId;
           document.getElementById('itemName').value = itemId;
           document.getElementById('borrow-form').style.display = 'block';
         } catch (err) {
+          Swal.close();
           Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -523,11 +524,17 @@
     });
 
     try {
+      // Create Bangkok timestamp (UTC+7)
+      const now = new Date();
+      const bangkokOffsetMs = 7 * 60 * 60 * 1000;
+      const localTimestamp = new Date(now.getTime() + bangkokOffsetMs).toISOString();
+
       const { error } = await supabase.from('borrowings').insert([{
         item_id: itemId,
         item_name: itemName,
         borrower: borrower,
         return_time: returnTime,
+        borrow_time: localTimestamp,
         returned: false
       }]);
 
@@ -552,6 +559,7 @@
     }
   });
 </script>
+
 
 </body>
 </html>

@@ -448,40 +448,42 @@
         });
 
         try {
-          const { data, error } = await supabase
-            .from('borrowings')
-            .select('*')
-            .eq('item_id', itemId)
-            .eq('returned', false)
-            .limit(1)
-            .maybeSingle();
+  const { data, error } = await supabase
+    .from('borrowings')
+    .select('*')
+    .eq('item_id', itemId)
+    .eq('returned', false)
+    .limit(1)
+    .maybeSingle();
 
-          Swal.close();
+  Swal.close();
 
-          if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
-          if (data) {
-            const borrowDateTime = new Date(data.borrow_time);
-            Swal.fire({
-              icon: 'warning',
-              title: 'This item is not returned yet!',
-              html: `Borrowed by <b>${data.borrower}</b><br>on <b>${borrowDateTime.toLocaleString('en-GB')}</b>`,
-              confirmButtonColor: '#d97706'
-            });
-            return;
-          }
+  if (data !== null) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'This item is not returned yet!',
+      html: `Borrowed by <b>${data.borrower}</b><br>at <b>${new Date(data.borrow_time).toLocaleString()}</b>.`,
+      confirmButtonColor: '#d97706'
+    });
+    return;
+  }
 
-          document.getElementById('itemId').value = itemId;
-          document.getElementById('itemName').value = itemId;
-          document.getElementById('borrow-form').style.display = 'block';
-        } catch (err) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to check item status.'
-          });
-          console.error(err);
-        }
+  // ✅ ไม่มีข้อมูล → แสดงฟอร์มกรอกชื่อ
+  document.getElementById('itemId').value = itemId;
+  document.getElementById('itemName').value = itemId;
+  document.getElementById('borrow-form').style.display = 'block';
+} catch (err) {
+  Swal.fire({
+    icon: 'error',
+    title: 'Error',
+    text: 'Failed to check item status.'
+  });
+  console.error(err);
+}
       }
     ).catch(err => {
       Swal.fire({

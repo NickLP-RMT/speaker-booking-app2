@@ -534,7 +534,7 @@
         .from('borrowings')
         .update({
           returned: true,
-          return_time: thaiTime.toISOString()
+          returned_at: new Date().toISOString()  // บันทึกวัน/เวลาที่คืนจริง
         })
         .eq('id', borrowId);
 

@@ -422,11 +422,12 @@
     </div>
   </div>
 
-<script>
+  <script>
   const SUPABASE_URL = 'https://diwywcrdttidmlwbwxl.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd3l3Y3JkdHRpZG1sd2J3eGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMDcyOTMsImV4cCI6MjA2NDY4MzI5M30.0H3N7R1xLWP8GP-b1zoECiLuYE8mTp8vfNbEqUDnAUg';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd3l3Y3JkdHRpZG1sd2J3eGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMDcyOTMsImV4cCI6MjA2NDY4MzI5M30.0H3N7R1xLWP8GP-b1zoECiLuYE8mTp8vfNbEqUDnAUg'; // ย่อตัวอย่าง
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // 📸 Scan QR Code
   document.getElementById('scan-btn').addEventListener('click', () => {
     const readerElement = document.getElementById('reader');
     readerElement.style.display = 'block';
@@ -436,7 +437,7 @@
       { facingMode: "environment" },
       { fps: 10, qrbox: 250 },
       async (decodedText) => {
-        await html5QrCode.stop();
+        html5QrCode.stop();
         readerElement.style.display = 'none';
 
         const itemId = decodedText.trim();
@@ -461,10 +462,11 @@
           if (error) throw error;
 
           if (data) {
+            const borrowDateTime = new Date(`${data.borrow_date}T${data.borrow_time}`);
             Swal.fire({
               icon: 'warning',
               title: 'This item is not returned yet!',
-              html: `Borrowed by <b>${data.borrower}</b><br>at <b>${new Date(data.borrow_time).toLocaleString()}</b>.`,
+              html: `Borrowed by <b>${data.borrower}</b><br>on <b>${borrowDateTime.toLocaleString('en-GB')}</b>`,
               confirmButtonColor: '#d97706'
             });
             return;
@@ -474,35 +476,41 @@
           document.getElementById('itemName').value = itemId;
           document.getElementById('borrow-form').style.display = 'block';
         } catch (err) {
+          console.error(err);
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to check item status.'
+            text: 'Failed to check item status.',
+            confirmButtonColor: '#dc2626'
           });
-          console.error(err);
         }
       }
     ).catch(err => {
       Swal.fire({
         icon: 'error',
         title: 'Camera Error',
-        text: 'Unable to access camera. Please check permission or browser support.'
+        text: 'Unable to access camera. Please check permissions.',
+        confirmButtonColor: '#1e3a8a'
       });
-      console.error("QR Code start error:", err);
-      readerElement.style.display = 'none';
+      console.error(err);
     });
   });
 
-  document.getElementById("borrow-form").addEventListener("submit", async function (e) {
+  // ✅ Submit Borrow Form
+  document.getElementById("borrow-form").addEventListener("submit", async function(e) {
     e.preventDefault();
 
+    const now = new Date();
+    const borrowDate = now.toISOString().split('T')[0];
+    const borrowTime = now.toTimeString().split(' ')[0];
     const itemId = document.getElementById("itemId").value;
     const itemName = document.getElementById("itemName").value;
-    const borrower = document.getElementById("borrower").value;
     const returnTime = document.getElementById("returnTime").value;
+    const borrower = document.getElementById("borrower").value;
 
     Swal.fire({
       title: 'Processing...',
+      text: 'Please wait while we save your request',
       allowOutsideClick: false,
       showConfirmButton: false,
       didOpen: () => Swal.showLoading()
@@ -513,30 +521,35 @@
         item_id: itemId,
         item_name: itemName,
         borrower: borrower,
-        return_time: returnTime
+        borrow_date: borrowDate,
+        borrow_time: borrowTime,
+        return_time: returnTime,
+        returned: false
       }]);
 
       if (error) throw error;
 
       Swal.fire({
         icon: 'success',
-        title: 'Borrow successful!',
-        timer: 2500,
-        showConfirmButton: false
+        title: 'Success!',
+        text: 'Borrowing recorded successfully.',
+        confirmButtonColor: '#059669',
+        timer: 3000,
+        timerProgressBar: true
       });
 
-      document.getElementById("borrow-form").reset();
-      document.getElementById("borrow-form").style.display = "none";
+      document.getElementById('borrow-form').reset();
+      document.getElementById('borrow-form').style.display = 'none';
     } catch (err) {
+      console.error(err);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Failed to save borrowing.'
+        text: 'Failed to save borrowing. Please try again.',
+        confirmButtonColor: '#dc2626'
       });
-      console.error(err);
     }
   });
 </script>
-
 </body>
 </html>

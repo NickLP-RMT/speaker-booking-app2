@@ -424,10 +424,9 @@
 
   <script>
   const SUPABASE_URL = 'https://diwywcrdttidmlwbwxl.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd3l3Y3JkdHRpZG1sd2J3eGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMDcyOTMsImV4cCI6MjA2NDY4MzI5M30.0H3N7R1xLWP8GP-b1zoECiLuYE8mTp8vfNbEqUDnAUg'; // ย่อตัวอย่าง
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd3l3Y3JkdHRpZG1sd2J3eGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMDcyOTMsImV4cCI6MjA2NDY4MzI5M30.0H3N7R1xLWP8GP-b1zoECiLuYE8mTp8vfNbEqUDnAUg';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // 📸 Scan QR Code
   document.getElementById('scan-btn').addEventListener('click', () => {
     const readerElement = document.getElementById('reader');
     readerElement.style.display = 'block';
@@ -462,7 +461,7 @@
           if (error) throw error;
 
           if (data) {
-            const borrowDateTime = new Date(`${data.borrow_date}T${data.borrow_time}`);
+            const borrowDateTime = new Date(data.borrow_time);
             Swal.fire({
               icon: 'warning',
               title: 'This item is not returned yet!',
@@ -476,13 +475,12 @@
           document.getElementById('itemName').value = itemId;
           document.getElementById('borrow-form').style.display = 'block';
         } catch (err) {
-          console.error(err);
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to check item status.',
-            confirmButtonColor: '#dc2626'
+            text: 'Failed to check item status.'
           });
+          console.error(err);
         }
       }
     ).catch(err => {
@@ -496,21 +494,16 @@
     });
   });
 
-  // ✅ Submit Borrow Form
-  document.getElementById("borrow-form").addEventListener("submit", async function(e) {
+  document.getElementById("borrow-form").addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    const now = new Date();
-    const borrowDate = now.toISOString().split('T')[0];
-    const borrowTime = now.toTimeString().split(' ')[0];
     const itemId = document.getElementById("itemId").value;
     const itemName = document.getElementById("itemName").value;
-    const returnTime = document.getElementById("returnTime").value;
     const borrower = document.getElementById("borrower").value;
+    const returnTime = document.getElementById("returnTime").value;
 
     Swal.fire({
       title: 'Processing...',
-      text: 'Please wait while we save your request',
       allowOutsideClick: false,
       showConfirmButton: false,
       didOpen: () => Swal.showLoading()
@@ -521,8 +514,6 @@
         item_id: itemId,
         item_name: itemName,
         borrower: borrower,
-        borrow_date: borrowDate,
-        borrow_time: borrowTime,
         return_time: returnTime,
         returned: false
       }]);
@@ -531,25 +522,23 @@
 
       Swal.fire({
         icon: 'success',
-        title: 'Success!',
-        text: 'Borrowing recorded successfully.',
-        confirmButtonColor: '#059669',
-        timer: 3000,
-        timerProgressBar: true
+        title: 'Borrow successful!',
+        timer: 2500,
+        showConfirmButton: false
       });
 
-      document.getElementById('borrow-form').reset();
-      document.getElementById('borrow-form').style.display = 'none';
+      document.getElementById("borrow-form").reset();
+      document.getElementById("borrow-form").style.display = "none";
     } catch (err) {
-      console.error(err);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Failed to save borrowing. Please try again.',
-        confirmButtonColor: '#dc2626'
+        text: 'Failed to save borrowing.'
       });
+      console.error(err);
     }
   });
 </script>
+
 </body>
 </html>
